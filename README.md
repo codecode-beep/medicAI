@@ -20,6 +20,22 @@ AI-powered medical intelligence platform with separate frontend and backend arch
 
 **Backend:** FastAPI, PostgreSQL, Redis, FAISS, LangChain, Gemini API, AWS S3, Docker
 
+## Deploying to GitHub
+
+**Before your first push**, ensure secrets are not in the repo:
+
+```bash
+# Remove accidentally tracked files (keeps them on disk)
+git rm -r --cached backend/.env backend/venv backend/data frontend/node_modules 2>/dev/null || true
+
+git add .gitignore
+git status   # verify .env and venv are NOT listed
+```
+
+Copy `backend/.env.example` to `backend/.env` locally and on your server — **never commit** `.env`.
+
+For production, set secrets via GitHub Actions secrets, Railway, Render, or your host's environment variables.
+
 ## Quick Start
 
 ### 1. Configure environment
