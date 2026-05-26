@@ -55,12 +55,24 @@ class MedicalAnalysisAgent:
         if existing:
             report = await self._get_report_for_file(db, existing.id)
             if report and report.status == "completed" and not _is_placeholder_report(report):
+                message = "Duplicate file detected — reusing existing analysis."
+                if save_to_history:
+                    await self._apply_save_to_history(
+                        db=db,
+                        user_id=user_id,
+                        report=report,
+                        analysis=self._analysis_from_report(report),
+                        extracted_text=existing.extracted_text or report.ai_summary or "",
+                        patient_name=patient_name,
+                        filename=filename or report.title,
+                    )
+                    message = "Duplicate file — added to your medical timeline."
                 return {
                     "is_duplicate": True,
                     "file_id": existing.id,
                     "report_id": report.id,
                     "report": report,
-                    "message": "Duplicate file detected — reusing existing analysis.",
+                    "message": message,
                 }
             if report:
                 return await self._reanalyze_existing(
@@ -221,21 +233,18 @@ class MedicalAnalysisAgent:
         report.recommendations = analysis.get("recommendations", [])
         report.historical_comparison = historical
         report.status = "completed"
+        report.is_saved = save_to_history
 
         if save_to_history:
-            pdf_bytes = generate_medical_report_pdf(
-                patient_name, filename, analysis, historical, []
+            await self._apply_save_to_history(
+                db=db,
+                user_id=user_id,
+                report=report,
+                analysis=analysis,
+                extracted_text=extracted_text,
+                patient_name=patient_name,
+                filename=filename,
             )
-            pdf_key, pdf_url = s3_service.upload_file(
-                pdf_bytes, f"report_{report.id}.pdf", "application/pdf", folder="reports"
-            )
-            report.generated_pdf_s3_key = pdf_key
-            report.generated_pdf_url = pdf_url
-            await rag_pipeline.index_report(
-                extracted_text or analysis.get("summary", ""), user_id, report.id
-            )
-            await self._update_medical_history(db, user_id, report, analysis)
-            await self._update_medicines(db, user_id, report, analysis.get("medicines", []))
 
         await db.flush()
         await redis_service.set_report_status(report.id, "completed", {"report_id": report.id})
@@ -288,7 +297,87 @@ class MedicalAnalysisAgent:
         }
         return await gemini_service.compare_reports(prev_data, current_data)
 
+    @staticmethod
+    def _analysis_from_report(report: Report) -> dict[str, Any]:
+        findings = report.ai_findings or {}
+        return {
+            "summary": report.ai_summary,
+            "findings": findings.get("findings", []) if isinstance(findings, dict) else [],
+            "interpretation": findings.get("interpretation", "") if isinstance(findings, dict) else "",
+            "medicines": report.medicines or [],
+            "conditions": report.conditions or [],
+            "severity": report.severity,
+            "recommendations": report.recommendations or [],
+        }
+
+    async def _has_history_entry(self, db: AsyncSession, report_id: int, user_id: int) -> bool:
+        result = await db.execute(
+            select(MedicalHistory.id).where(
+                MedicalHistory.report_id == report_id,
+                MedicalHistory.user_id == user_id,
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def _apply_save_to_history(
+        self,
+        db: AsyncSession,
+        user_id: int,
+        report: Report,
+        analysis: dict[str, Any],
+        extracted_text: str,
+        patient_name: str,
+        filename: str,
+    ) -> None:
+        report.is_saved = True
+        if await self._has_history_entry(db, report.id, user_id):
+            return
+
+        historical = report.historical_comparison or analysis.get("historical_comparison", {})
+        if not report.generated_pdf_s3_key:
+            pdf_bytes = generate_medical_report_pdf(
+                patient_name, filename, analysis, historical, []
+            )
+            pdf_key, pdf_url = s3_service.upload_file(
+                pdf_bytes, f"report_{report.id}.pdf", "application/pdf", folder="reports"
+            )
+            report.generated_pdf_s3_key = pdf_key
+            report.generated_pdf_url = pdf_url
+
+        await rag_pipeline.index_report(
+            extracted_text or analysis.get("summary", "") or "", user_id, report.id
+        )
+        await self._update_medical_history(db, user_id, report, analysis)
+        await self._update_medicines(db, user_id, report, analysis.get("medicines", []))
+
+    async def backfill_medical_history(self, db: AsyncSession, user_id: int) -> None:
+        """Create timeline rows for saved reports that predate the history fix."""
+        history_report_ids = select(MedicalHistory.report_id).where(
+            MedicalHistory.user_id == user_id,
+            MedicalHistory.report_id.isnot(None),
+        )
+        result = await db.execute(
+            select(Report).where(
+                Report.user_id == user_id,
+                Report.is_saved == True,
+                Report.status == "completed",
+                Report.id.not_in(history_report_ids),
+            )
+        )
+        for report in result.scalars().all():
+            await self._apply_save_to_history(
+                db=db,
+                user_id=user_id,
+                report=report,
+                analysis=self._analysis_from_report(report),
+                extracted_text=report.ai_summary or "",
+                patient_name="Patient",
+                filename=report.title,
+            )
+
     async def _update_medical_history(self, db: AsyncSession, user_id: int, report: Report, analysis: dict) -> None:
+        if await self._has_history_entry(db, report.id, user_id):
+            return
         entry = MedicalHistory(
             user_id=user_id,
             report_id=report.id,

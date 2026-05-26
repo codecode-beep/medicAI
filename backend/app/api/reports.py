@@ -59,6 +59,8 @@ async def get_timeline(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    await medical_agent.backfill_medical_history(db, current_user.id)
+
     events_result = await db.execute(
         select(MedicalHistory)
         .where(MedicalHistory.user_id == current_user.id)

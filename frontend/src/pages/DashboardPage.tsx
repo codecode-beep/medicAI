@@ -28,6 +28,9 @@ export default function DashboardPage() {
     onSuccess: (data) => {
       setLastResult(data);
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      if (saveToHistory) {
+        queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      }
     },
   });
 

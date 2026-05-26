@@ -14,22 +14,29 @@ from app.schemas.report import ReportListResponse, ReportResponse, UploadRespons
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 
+def _parse_form_bool(value: bool | str) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("true", "1", "yes", "on")
+
+
 @router.post("/analyze", response_model=UploadResponse)
 async def analyze_file(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     file: UploadFile = File(...),
-    save_to_history: bool = Form(False),
+    save_to_history: str = Form("false"),
     question: str | None = Form(None),
 ):
     content = await file.read()
+    save_flag = _parse_form_bool(save_to_history)
     result = await medical_agent.process_upload(
         db=db,
         user_id=current_user.id,
         content=content,
         filename=file.filename or "upload",
         mime_type=file.content_type or "application/octet-stream",
-        save_to_history=save_to_history,
+        save_to_history=save_flag,
         question=question,
         patient_name=current_user.full_name,
     )
