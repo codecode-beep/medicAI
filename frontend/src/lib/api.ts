@@ -1,14 +1,36 @@
 import axios from 'axios';
+import { useAuthStore } from '../store';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export const api = axios.create({ baseURL: API_BASE });
 
+function getAuthToken(): string | null {
+  const fromStore = useAuthStore.getState().token;
+  if (fromStore) return fromStore;
+  return localStorage.getItem('token');
+}
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const token = getAuthToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout();
+      if (!window.location.pathname.startsWith('/auth')) {
+        window.location.href = '/auth';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface User {
   id: number;

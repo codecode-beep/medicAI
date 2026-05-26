@@ -20,10 +20,18 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('medintel-auth');
         set({ token: null, user: null });
       },
     }),
-    { name: 'medintel-auth' }
+    {
+      name: 'medintel-auth',
+      onRehydrateStorage: () => (state) => {
+        if (state?.token) {
+          localStorage.setItem('token', state.token);
+        }
+      },
+    }
   )
 );
 

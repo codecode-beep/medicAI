@@ -80,7 +80,7 @@ export default function DashboardPage() {
                       <FileText className="w-5 h-5 text-primary-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{r.title}</p>
+                      <p className="font-medium truncate" title={r.title}>{r.title}</p>
                       <p className="text-sm text-slate-500">{new Date(r.created_at).toLocaleString()}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">

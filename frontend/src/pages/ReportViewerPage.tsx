@@ -29,15 +29,17 @@ export default function ReportViewerPage() {
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="p-6 border-b bg-slate-50">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{report.title}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-bold break-words" title={report.title}>
+                {report.title}
+              </h1>
               <p className="text-slate-500 text-sm mt-1">
                 {report.report_type.toUpperCase()} · {new Date(report.created_at).toLocaleString()}
               </p>
             </div>
             {report.severity && (
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${severityColors[report.severity] || ''}`}>
+              <span className={`shrink-0 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${severityColors[report.severity] || ''}`}>
                 {report.severity.toUpperCase()}
               </span>
             )}

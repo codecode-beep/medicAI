@@ -72,21 +72,30 @@ export default function ReportsPage() {
             }`}
             onClick={() => compareMode && toggleSelect(r.id)}
           >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+            <div className="flex items-start gap-4 min-w-0">
+              <div className="w-12 h-12 shrink-0 bg-primary-50 rounded-xl flex items-center justify-center">
                 <FileText className="w-6 h-6 text-primary-600" />
               </div>
-                <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{r.title}</h3>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-start gap-2 gap-y-1">
+                  <h3
+                    className="font-semibold break-all line-clamp-2 flex-1 min-w-0"
+                    title={r.title}
+                  >
+                    {r.title}
+                  </h3>
                   {r.is_saved ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">In history</span>
+                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                      In history
+                    </span>
                   ) : (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Quick only</span>
+                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 whitespace-nowrap">
+                      Quick only
+                    </span>
                   )}
                 </div>
                 <p className="text-sm text-slate-500 mt-1">{new Date(r.created_at).toLocaleDateString()}</p>
-                <p className="text-sm text-slate-600 mt-2 line-clamp-2">{r.ai_summary}</p>
+                <p className="text-sm text-slate-600 mt-2 line-clamp-3 break-words">{r.ai_summary}</p>
                 {!compareMode && (
                   <Link to={`/reports/${r.id}`} className="text-primary-600 text-sm mt-3 inline-block hover:underline">
                     View Report →
