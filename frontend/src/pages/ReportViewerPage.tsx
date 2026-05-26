@@ -8,6 +8,7 @@ const severityColors: Record<string, string> = {
   moderate: 'text-yellow-600 bg-yellow-50',
   high: 'text-red-600 bg-red-50',
   critical: 'text-red-800 bg-red-100',
+  unknown: 'text-slate-600 bg-slate-100',
 };
 
 export default function ReportViewerPage() {
@@ -73,10 +74,10 @@ export default function ReportViewerPage() {
             </Section>
           )}
 
-          {report.medicines && report.medicines.length > 0 && (
+          {report.medicines?.filter((m) => m.name?.trim()).length > 0 && (
             <Section title="Medicines" icon={Pill}>
               <div className="grid sm:grid-cols-2 gap-3">
-                {report.medicines.map((m, i) => (
+                {report.medicines.filter((m) => m.name?.trim()).map((m, i) => (
                   <div key={i} className="p-3 bg-slate-50 rounded-lg">
                     <p className="font-medium">{m.name}</p>
                     {m.dosage && <p className="text-sm text-slate-500">Dosage: {m.dosage}</p>}
