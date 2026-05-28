@@ -294,7 +294,3 @@ Contributions welcome — open an issue or PR with your idea.
 **MedIntel AI is for informational and educational purposes only.** It does not provide medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for health decisions. Do not use this tool in emergencies.
 
 ---
-
-## License
-
-MIT — use freely, attribute kindly, and build something that helps people understand their health data.
